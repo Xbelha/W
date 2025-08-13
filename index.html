@@ -40,7 +40,7 @@
         <button class="filter-btn filter-category-btn" onclick="filterProducts('bread', this)" data-lang-key="bread"><i class="fas fa-bread-slice"></i> Brot</button>
         <button class="filter-btn filter-category-btn" onclick="filterProducts('broetchen', this)" data-lang-key="rolls"><i class="fas fa-cookie"></i> Brötchen</button>
         <button class="filter-btn filter-category-btn" onclick="filterProducts('sweet', this)" data-lang-key="sweets"><i class="fas fa-birthday-cake"></i> Süßes</button>
-        <button class="filter-btn filter-category-btn" onclick="filterProducts('sunday', this)" data-lang-key="sundaySpecials"><i class="fas fa-calendar-day"></i> Sonntags</button>
+        <button class="filter-btn filter-category-btn" onclick="filterProducts('holiday', this)" data-lang-key="holidaySpecials"><i class="fas fa-calendar-day"></i> Sonn- & Feiertags</button>
         <button class="filter-btn" onclick="toggleSearch()" data-lang-key="searchBtn" title="Suche"><i class="fas fa-search"></i></button>
     </div>
   </div>
@@ -50,7 +50,10 @@
   <button id="clearSearchBtn" onclick="clearSearch()" aria-label="Clear search text">×</button>
 </div>
 
-  <section class="products" id="productGrid"></section>
+  <section class="products" id="productGrid">
+    <!-- Loading spinner added -->
+    <div class="loading-spinner"></div>
+  </section>
   <div id="paginationContainer"></div>
 
     <div class="modal" id="modal">

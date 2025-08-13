@@ -21,7 +21,7 @@ const translations = {
   de: {
     langSwitch: 'Deutsch', mainTitle: 'Macis Biobäckerei in Leipzig', subTitle: 'Traditionelle Backkunst, jeden Tag frisch',
     orderNowBtn: 'Jetzt bestellen', allBakedGoods: 'Alle Backwaren', bread: 'Brot', rolls: 'Brötchen', sweets: 'Süßes', searchBtn: 'Suche',
-    sundaySpecials: 'Sonntags',
+    holidaySpecials: 'Sonn- & Feiertags',
     orderTitle: 'Deine Bestellung', submitBtn: 'Absenden', contactTitle: 'Kontakt & Öffnungszeiten', addressLabel: 'Adresse:', phoneLabel: 'Telefon:', emailLabel: 'E-Mail:',
     openingHoursTitle: 'Öffnungszeiten', openingHoursWeekday: 'Montag – Samstag: 7:00 – 19:00 Uhr', openingHoursSunday: 'Sonntag: 8:00 – 12:00 Uhr',
     selectProductQuantityAlert: 'Bitte gib eine gültige Menge ein.', noProductsAddedAlert: 'Dein Warenkorb ist leer.',
@@ -33,12 +33,12 @@ const translations = {
     addToCartBtn: 'Zum Warenkorb', yourCart: 'Dein Warenkorb', searchPlaceholder: 'Gib ein, was du suchst...', yourName: 'Dein Name', phoneNumber: 'Telefonnummer',
     emailOptional: 'E-Mail (optional)', messageOptional: 'Nachricht (optional)', notProvided: 'Nicht angegeben', totalText: 'Gesamt:',
     prevPage: 'Zurück', nextPage: 'Weiter',
-    sundayProductOnNonSundayAlert: 'Ihre Bestellung enthält Artikel, die nur Sonntags erhältlich sind. Bitte wählen Sie einen Sonntag als Abholdatum.'
+    holidayProductOnNonHolidayAlert: 'Ihre Bestellung enthält Artikel, die nur an Sonn- und Feiertagen erhältlich sind. Bitte wählen Sie einen entsprechenden Tag als Abholdatum.'
   },
   en: {
     langSwitch: 'English', mainTitle: 'Macis Organic Bakery in Leipzig', subTitle: 'Traditional Baking, Fresh Every Day',
     orderNowBtn: 'Order Now', allBakedGoods: 'All Baked Goods', bread: 'Bread', rolls: 'Rolls', sweets: 'Sweets', searchBtn: 'Search',
-    sundaySpecials: 'Sundays',
+    holidaySpecials: 'Sundays & Holidays',
     orderTitle: 'Your Order', submitBtn: 'Submit', contactTitle: 'Contact & Opening Hours', addressLabel: 'Address:', phoneLabel: 'Phone:', emailLabel: 'Email:',
     openingHoursTitle: 'Opening Hours', openingHoursWeekday: 'Monday – Saturday: 7:00 AM – 7:00 PM', openingHoursSunday: 'Sunday: 8:00 AM – 12:00 PM',
     selectProductQuantityAlert: 'Please enter a valid quantity.', noProductsAddedAlert: 'Your cart is empty.',
@@ -50,53 +50,113 @@ const translations = {
     addToCartBtn: 'Add to Cart', yourCart: 'Your Cart', searchPlaceholder: 'Enter what you are looking for...', yourName: 'Your Name', phoneNumber: 'Phone Number',
     emailOptional: 'E-Mail (optional)', messageOptional: 'Message (optional)', notProvided: 'Not provided', totalText: 'Total:',
     prevPage: 'Previous', nextPage: 'Next',
-    sundayProductOnNonSundayAlert: 'Your order contains Sunday-only items. Please select a Sunday as your pickup date.'
+    holidayProductOnNonHolidayAlert: 'Your order contains Sunday/Holiday-only items. Please select an appropriate day as your pickup date.'
   }
 };
 
+// List of public holidays in Saxony, Germany (Format: MM-DD)
+const publicHolidays = [
+    "01-01", // New Year's Day
+    "05-01", // Labour Day
+    "10-03", // Day of German Unity
+    "10-31", // Reformation Day
+    "12-25", // Christmas Day
+    "12-26", // 2nd Day of Christmas
+    // Good Friday and Easter Monday are variable, need calculation
+];
+
+function isPublicHoliday(date) {
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const dateString = `${month}-${day}`;
+    
+    if (publicHolidays.includes(dateString)) return true;
+
+    // Calculate Easter Sunday for the given year
+    const year = date.getFullYear();
+    const a = year % 19;
+    const b = Math.floor(year / 100);
+    const c = year % 100;
+    const d = Math.floor(b / 4);
+    const e = b % 4;
+    const f = Math.floor((b + 8) / 25);
+    const g = Math.floor((b - f + 1) / 3);
+    const h = (19 * a + b - d - g + 15) % 30;
+    const i = Math.floor(c / 4);
+    const k = c % 4;
+    const l = (32 + 2 * e + 2 * i - h - k) % 7;
+    const m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const easterMonth = Math.floor((h + l - 7 * m + 114) / 31);
+    const easterDay = ((h + l - 7 * m + 114) % 31) + 1;
+    const easterSunday = new Date(year, easterMonth - 1, easterDay);
+
+    // Good Friday is 2 days before Easter Sunday
+    const goodFriday = new Date(easterSunday);
+    goodFriday.setDate(easterSunday.getDate() - 2);
+
+    // Easter Monday is 1 day after Easter Sunday
+    const easterMonday = new Date(easterSunday);
+    easterMonday.setDate(easterSunday.getDate() + 1);
+
+    // Check if the date is Good Friday or Easter Monday
+    if (date.getTime() === goodFriday.getTime() || date.getTime() === easterMonday.getTime()) {
+        return true;
+    }
+
+    return false;
+}
+
+
 function displayProducts() {
-    productGrid.innerHTML = "";
+    productGrid.innerHTML = ""; // Clear previous products
+    productGrid.classList.remove('loaded'); // Hide products while rendering
+    
     const startIndex = (currentPage - 1) * productsPerPage;
     const paginatedProducts = currentFilteredProducts.slice(startIndex, startIndex + productsPerPage);
 
-    productGrid.innerHTML = paginatedProducts.map((p, index) => {
-        let badgeText = '';
-        let badgeClass = 'product-badge';
-        if (p.badge === 'new') {
-            badgeClass += ' new';
-            badgeText = currentLang === 'de' ? 'Neu!' : 'New!';
-        } else if (p.availability === 'sunday') {
-            badgeText = currentLang === 'de' ? 'Nur Sonntags' : 'Sunday Only';
-        }
+    if (paginatedProducts.length > 0) {
+        productGrid.innerHTML = paginatedProducts.map((p, index) => {
+            let badgeText = '';
+            let badgeClass = 'product-badge';
+            if (p.badge === 'new') {
+                badgeClass += ' new';
+                badgeText = currentLang === 'de' ? 'Neu!' : 'New!';
+            } else if (p.availability === 'holiday') {
+                badgeText = currentLang === 'de' ? 'Sonn- & Feiertags' : 'Sundays & Holidays';
+            }
 
-        const cartItem = cart.find(item => item.product.id === p.id);
-        const quantityInCart = cartItem ? cartItem.quantity : 0;
-        
-        const cartControlsHTML = `
-            <div class="quantity-selector">
-                <button class="quantity-btn" aria-label="Decrease quantity" data-action="decrease" data-product-id="${p.id}">-</button>
-                <span class="quantity-display" aria-live="polite">${quantityInCart}</span>
-                <button class="quantity-btn" aria-label="Increase quantity" data-action="increase" data-product-id="${p.id}">+</button>
-            </div>
-        `;
-        
-        return `
-            <div class="product card-style" data-product-id="${p.id}" style="animation-delay: ${index * 60}ms">
-                <div class="product-image-container">
-                    <img src="${p.img}" alt="${currentLang === 'de' ? p.name_de : p.name_en}" loading="lazy" onerror="this.onerror=null; this.src='https://via.placeholder.com/220x220?text=Image+Missing';">
-                    ${badgeText ? `<div class="${badgeClass}">${badgeText}</div>` : ''}
+            const cartItem = cart.find(item => item.product.id === p.id);
+            const quantityInCart = cartItem ? cartItem.quantity : 0;
+            
+            const cartControlsHTML = `
+                <div class="quantity-selector">
+                    <button class="quantity-btn" aria-label="Decrease quantity" data-action="decrease" data-product-id="${p.id}">-</button>
+                    <span class="quantity-display" aria-live="polite">${quantityInCart}</span>
+                    <button class="quantity-btn" aria-label="Increase quantity" data-action="increase" data-product-id="${p.id}">+</button>
                 </div>
-                <div class="product-info">
-                    <h3>${currentLang === 'de' ? p.name_de : p.name_en}</h3>
-                    <div>
-                        <p class="product-price">${p.price.toFixed(2)} €</p>
-                        <div class="card-cart-controls">${cartControlsHTML}</div>
+            `;
+            
+            return `
+                <div class="product card-style" data-product-id="${p.id}" style="animation-delay: ${index * 60}ms">
+                    <div class="product-image-container">
+                        <img src="${p.img}" alt="${currentLang === 'de' ? p.name_de : p.name_en}" loading="lazy" onerror="this.onerror=null; this.src='https://via.placeholder.com/220x220?text=Image+Missing';">
+                        ${badgeText ? `<div class="${badgeClass}">${badgeText}</div>` : ''}
+                    </div>
+                    <div class="product-info">
+                        <h3>${currentLang === 'de' ? p.name_de : p.name_en}</h3>
+                        <div>
+                            <p class="product-price">${p.price.toFixed(2)} €</p>
+                            <div class="card-cart-controls">${cartControlsHTML}</div>
+                        </div>
                     </div>
                 </div>
-            </div>
-        `;
-    }).join('');
+            `;
+        }).join('');
+    }
 
+    // Add loaded class to show products and hide spinner
+    setTimeout(() => productGrid.classList.add('loaded'), 10);
+    
     renderPaginationControls();
     applyLanguage();
 }
@@ -193,8 +253,8 @@ function filterProducts(cat, element) {
 
     if (cat === 'all') {
         currentFilteredProducts = [...products];
-    } else if (cat === 'sunday') {
-        currentFilteredProducts = products.filter(p => p.availability === 'sunday');
+    } else if (cat === 'holiday') {
+        currentFilteredProducts = products.filter(p => p.availability === 'holiday');
     } else {
         currentFilteredProducts = products.filter(p => p.category === cat);
     }
@@ -443,8 +503,11 @@ function populatePickupHours() {
     const dayOfWeek = selectedDate.getDay();
 
     let startHour, endHour;
-    if (dayOfWeek === 0) { startHour = 8; endHour = 12; }
-    else { startHour = 7; endHour = 19; }
+    if (dayOfWeek === 0 || isPublicHoliday(selectedDate)) { // Sunday or public holiday
+        startHour = 8; endHour = 12; 
+    } else { // Weekday
+        startHour = 7; endHour = 19; 
+    }
     
     let firstAvailableHourSet = false;
     for (let hour = startHour; hour < endHour; hour++) {
@@ -472,13 +535,14 @@ function validateCartAgainstPickupDate() {
 
     if (!pickupDateStr) return;
 
-    const hasSundayItem = cart.some(item => item.product.availability === 'sunday');
-    if (hasSundayItem) {
+    const hasHolidayItem = cart.some(item => item.product.availability === 'holiday');
+    if (hasHolidayItem) {
         const selectedDate = new Date(pickupDateStr + 'T00:00:00');
         const isSunday = selectedDate.getDay() === 0;
+        const isHoliday = isPublicHoliday(selectedDate);
         
-        if (!isSunday) {
-            messageContainer.textContent = translations[currentLang].sundayProductOnNonSundayAlert;
+        if (!isSunday && !isHoliday) {
+            messageContainer.textContent = translations[currentLang].holidayProductOnNonHolidayAlert;
             submitBtn.disabled = true;
             return false;
         }
@@ -490,11 +554,12 @@ function handleDateChange() {
     populatePickupHours();
     validateCartAgainstPickupDate();
 }
+
 function submitOrder(event) {
     event.preventDefault();
 
     if (!validateCartAgainstPickupDate()) {
-        alert(translations[currentLang].sundayProductOnNonSundayAlert);
+        alert(translations[currentLang].holidayProductOnNonHolidayAlert);
         return;
     }
 
@@ -504,10 +569,14 @@ function submitOrder(event) {
 
     const name = formData.get('name');
     const phone = formData.get('phone');
-    const email = formData.get('email') || 'Nicht angegeben';
+    const email = formData.get('email') || (currentLang === 'de' ? 'Nicht angegeben' : 'Not provided');
     const pickupDate = formData.get('pickupDate');
     const pickupTime = formData.get('pickupTime');
     const userMessage = formData.get('message');
+
+    // Save order details to local storage for the thank you page
+    const lastOrder = { name, phone, pickupDate, pickupTime, cart };
+    localStorage.setItem('lastOrder', JSON.stringify(lastOrder));
 
     const cartSummary = cart.map(item =>
         `${item.quantity} x ${currentLang === 'de' ? item.product.name_de : item.product.name_en} (${(item.product.price * item.quantity).toFixed(2)} €)`
@@ -535,7 +604,7 @@ Nachricht: ${userMessage}
     dataToSend.append('text', emailBody); 
 
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Wird gesendet...';
+    submitBtn.textContent = currentLang === 'de' ? 'Wird gesendet...' : 'Sending...';
 
     fetch(form.action, {
         method: form.method,
@@ -545,24 +614,20 @@ Nachricht: ${userMessage}
         }
     }).then(response => {
         if (response.ok) {
-            alert(translations[currentLang].orderSuccessAlert);
-            form.reset();
-            cart = [];
-            updateCartCount();
-            closeOrderForm();
-            displayProducts();
+            // Redirect to thank you page on success
+            window.location.href = 'thank-you.html';
         } else {
             response.json().then(data => {
                 if (Object.hasOwn(data, 'errors')) {
                     alert(data["errors"].map(error => error["message"]).join(", "));
                 } else {
-                    alert('Ein Fehler ist aufgetreten. Bitte versuchen Sie es per Telefon.');
+                    alert(currentLang === 'de' ? 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es per Telefon.' : 'An error occurred. Please try ordering by phone.');
                 }
             })
         }
     }).catch(error => {
         console.error('Error submitting order:', error);
-        alert('Die Bestellung konnte nicht gesendet werden. Bitte prüfen Sie Ihre Internetverbindung oder bestellen Sie per Telefon.');
+        alert(currentLang === 'de' ? 'Die Bestellung konnte nicht gesendet werden. Bitte prüfen Sie Ihre Internetverbindung oder bestellen Sie per Telefon.' : 'The order could not be sent. Please check your internet connection or order by phone.');
     }).finally(() => {
         submitBtn.disabled = false;
         applyLanguage();
@@ -571,6 +636,9 @@ Nachricht: ${userMessage}
 
 // Initial setup when the page loads
 document.addEventListener('DOMContentLoaded', () => {
+    // Show spinner immediately
+    productGrid.innerHTML = '<div class="loading-spinner"></div>';
+
     fetch('Products.json')
         .then(response => {
             if (!response.ok) {

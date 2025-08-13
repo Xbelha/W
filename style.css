@@ -264,6 +264,8 @@ main { padding-top: 20px; }
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 35px;
+    position: relative;
+    min-height: 300px; /* Ensure container has height while loading */
 }
 .card-style {
     border-radius: 16px;
@@ -379,6 +381,35 @@ main { padding-top: 20px; }
     min-width: 40px;
     text-align: center;
 }
+
+/* Loading Spinner */
+.loading-spinner {
+    border: 5px solid var(--section-bg);
+    border-top: 5px solid var(--accent-color);
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin-top: -25px;
+    margin-left: -25px;
+    z-index: 10;
+    opacity: 1;
+    transition: opacity 0.3s;
+}
+
+.products.loaded .loading-spinner {
+    opacity: 0;
+    pointer-events: none;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
 
 /* Pagination Styling */
 #paginationContainer {
